@@ -1,0 +1,71 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MACCOXE | Professional IT Document Generator</title>
+    
+    <!-- SEO Tags -->
+    <meta name="description" content="Generate professional IT contracts, salary slips, and certificates instantly with AI power.">
+    <meta name="keywords" content="IT Documents, Contract Generator, Salary Slip, Appointment Letter, AI Document Creator">
+    
+    <!-- OpenGraph (Social Media sharing) -->
+    <meta property="og:title" content="MACCOXE - Professional IT Suite">
+    <meta property="og:description" content="Instant high-quality IT sector document generation with AI synthesis.">
+    <meta property="og:image" content="https://api.dicebear.com/7.x/shapes/svg?seed=maccoxe">
+    <meta property="og:url" content="https://maccoxe.vercel.app">
+    <meta property="og:type" content="website">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <!-- PDF Generation Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            color: #0f172a;
+            -webkit-font-smoothing: antialiased;
+        }
+        .doc-body {
+            font-family: 'Lora', serif;
+            font-size: 10.5pt;
+            line-height: 1.6;
+            color: #1e293b;
+        }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+            .a4-sheet {
+                box-shadow: none !important;
+                border: none !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 20mm !important;
+            }
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module" src="index.tsx"></script>
+
+</body>
+</html>
