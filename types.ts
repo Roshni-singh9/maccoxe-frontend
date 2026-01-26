@@ -89,6 +89,8 @@ export interface DocumentData {
   totalDeductions?: number;
   netPay?: number;
   netPayInWords?: string;
+  editorialContent?: string;
+  salaryInstructions?: string;
   // NDA Specific
   purposeOfDisclosure?: string;
   confidentialityDuration?: string;

@@ -43,7 +43,7 @@ import {
   Palette
 } from 'lucide-react';
 import { DocumentType, DocumentData, SavedDocument, Signatory, SalaryComponent } from '../types';
-import { generateProfessionalContentStream } from '../services/geminiService';
+import { generateProfessionalContentStream, extractSalarySlipData } from '../services/geminiService';
 
 interface DocumentEditorProps {
   type: DocumentType;
@@ -122,6 +122,8 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type, onBack, initialDo
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [salarySlipImage, setSalarySlipImage] = useState<File | null>(null);
+  const [isExtracting, setIsExtracting] = useState<boolean>(false);
 
   const isSalarySlip = activeType === DocumentType.SALARY_SLIP;
   const isContract = activeType === DocumentType.EMPLOYMENT_CONTRACT || activeType === DocumentType.INTERNSHIP_CONTRACT || activeType === DocumentType.CONSULTANT_AGREEMENT || activeType === DocumentType.APPOINTMENT_LETTER;
@@ -243,12 +245,42 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type, onBack, initialDo
     setSaveSuccess(false);
     setErrorMessage(null);
     try {
-      await generateProfessionalContentStream(activeType, formData, (chunk) => setGeneratedContent(chunk));
+      if (activeType === DocumentType.SALARY_SLIP) {
+        // For salary slip, generate components and update formData
+        let fullResponse = "";
+        await generateProfessionalContentStream(activeType, formData, (chunk) => {
+          fullResponse += chunk;
+        });
+        const salaryData = JSON.parse(fullResponse);
+        setFormData(prev => ({ ...prev, ...salaryData }));
+      } else {
+        await generateProfessionalContentStream(activeType, formData, (chunk) => setGeneratedContent(chunk));
+      }
     } catch (error: any) {
       console.error("Generation failed:", error);
       setErrorMessage(error.message || "Synthesis failed. Check API Key.");
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleExtractSalarySlip = async () => {
+    if (!salarySlipImage) return;
+    setIsExtracting(true);
+    setErrorMessage(null);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = (e.target?.result as string).split(',')[1];
+        const extractedData = await extractSalarySlipData(base64);
+        setFormData(prev => ({ ...prev, ...extractedData }));
+      };
+      reader.readAsDataURL(salarySlipImage);
+    } catch (error: any) {
+      console.error("Extraction failed:", error);
+      setErrorMessage(error.message || "Extraction failed. Check API Key.");
+    } finally {
+      setIsExtracting(false);
     }
   };
 
@@ -350,6 +382,11 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type, onBack, initialDo
               <h1 className="text-3xl font-black text-[#0c1b4d] uppercase leading-none mb-1">{formData.companyName}</h1>
               <p className="text-[9px] font-bold text-[#475569] uppercase tracking-wider max-w-[300px] leading-tight">{formData.companyAddress}</p>
               {formData.companyRegNumber && <p className="text-[8px] font-black text-indigo-600 mt-1 uppercase tracking-widest">CIN: {formData.companyRegNumber}</p>}
+              <div className="mt-2 space-y-0.5">
+                {formData.companyEmail && <p className="text-[8px] font-bold text-slate-500">Email: {formData.companyEmail}</p>}
+                {formData.companyPhone && <p className="text-[8px] font-bold text-slate-500">Phone: {formData.companyPhone}</p>}
+                {formData.companyWebsite && <p className="text-[8px] font-bold text-slate-500">Website: {formData.companyWebsite}</p>}
+              </div>
             </div>
          </div>
          <div className="text-right">
@@ -414,21 +451,6 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type, onBack, initialDo
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Net Payable</p>
           <p className="text-2xl font-black text-[#0c1b4d]">₹ {formData.netPay?.toLocaleString() || '0'}/-</p>
         </div>
-      </div>
-      <div className="mt-12 flex justify-between items-end px-4">
-        <div className="text-center">
-          <div className="w-48 border-b border-slate-400 mb-2 h-12"></div>
-          <p className="text-[10px] font-black uppercase text-slate-400">Employee Signature</p>
-        </div>
-        {formData.signatories.map((sig, idx) => sig.name && (
-          <div key={idx} className="text-center">
-            <div className="w-48 border-b border-slate-400 mb-2 h-12 flex items-end justify-center">
-               {sig.signUrl && <img src={sig.signUrl} className="max-h-12 object-contain" />}
-            </div>
-            <p className="text-[11px] font-black uppercase">{sig.name}</p>
-            <p className="text-[9px] font-bold text-slate-400 uppercase">{sig.role}</p>
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -565,6 +587,39 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type, onBack, initialDo
            {/* SALARY SLIP DETAILS */}
            {isSalarySlip && (
              <div className="space-y-6">
+                {/* AUTO-FILL FROM SALARY SLIP */}
+                <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 space-y-3">
+                   <div className="flex items-center gap-2 text-indigo-600"><Upload size={12} /><p className="text-[9px] font-black uppercase tracking-[0.2em]">Auto-Fill from Salary Slip</p></div>
+                   <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => setSalarySlipImage(e.target.files?.[0] || null)} 
+                      className="w-full px-3 py-2 bg-white border border-indigo-100 rounded-xl text-xs file:mr-4 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                   />
+                   <button 
+                      onClick={handleExtractSalarySlip} 
+                      disabled={!salarySlipImage || isExtracting} 
+                      className="w-full py-2.5 bg-[#0c1b4d] text-white rounded-lg font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 active:scale-95 transition-all"
+                   >
+                      {isExtracting ? <Loader2 className="animate-spin" size={12} /> : <Sparkles size={12} />}
+                      {isExtracting ? 'Extracting...' : 'Extract Details with AI'}
+                   </button>
+                </div>
+
+                {/* AI SALARY COMPONENT GENERATOR */}
+                <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 space-y-3">
+                   <div className="flex items-center gap-2 text-indigo-600"><Wand2 size={12} /><p className="text-[9px] font-black uppercase tracking-[0.2em]">AI Salary Component Generator</p></div>
+                   <textarea name="salaryInstructions" value={formData.salaryInstructions || ''} onChange={handleInputChange} placeholder="Enter salary amount and any specific instructions for Gemini AI (e.g., 'Monthly salary: 50000 INR, include HRA, Conveyance, PF deductions')" className="w-full px-3 py-2 bg-white border border-indigo-100 rounded-xl text-xs h-16 resize-none" />
+                   <button 
+                      onClick={handleGenerate} 
+                      disabled={isGenerating} 
+                      className="w-full py-2.5 bg-[#0c1b4d] text-white rounded-lg font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 active:scale-95 transition-all"
+                   >
+                      {isGenerating ? <Loader2 className="animate-spin" size={12} /> : <Sparkles size={12} />}
+                      {isGenerating ? 'Generating...' : 'Generate Salary Components'}
+                   </button>
+                </div>
+
                 <div className="space-y-3">
                    <div className="flex items-center gap-2 text-slate-400 border-b border-slate-100 pb-2"><UserCircle size={14} /><p className="text-[9px] font-black uppercase tracking-[0.2em]">Employee Info</p></div>
                    <div className="grid grid-cols-2 gap-2">
@@ -580,6 +635,59 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type, onBack, initialDo
                       <input name="ifscCode" value={formData.ifscCode || ''} onChange={handleInputChange} placeholder="IFSC" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[10px]" />
                    </div>
                    <input name="bankAccountNumber" value={formData.bankAccountNumber || ''} onChange={handleInputChange} placeholder="Acc Number" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[10px]" />
+                </div>
+                <div className="space-y-3">
+                   <div className="flex items-center gap-2 text-slate-400 border-b border-slate-100 pb-2"><MessageSquareText size={14} /><p className="text-[9px] font-black uppercase tracking-[0.2em]">Editorial Content</p></div>
+                   
+                   {/* TOOLBAR */}
+                   <div className="bg-slate-900 rounded-xl p-2 flex flex-wrap gap-1 sticky top-0 z-20 shadow-xl border border-slate-800">
+                     <div className="flex items-center gap-1 border-r border-slate-700 pr-1 mr-1">
+                        <button onClick={() => execCommand('bold')} className="p-1.5 text-white hover:bg-slate-700 rounded-lg transition-colors" title="Bold"><Bold size={14} /></button>
+                        <button onClick={() => execCommand('italic')} className="p-1.5 text-white hover:bg-slate-700 rounded-lg transition-colors" title="Italic"><Italic size={14} /></button>
+                        <button onClick={() => execCommand('underline')} className="p-1.5 text-white hover:bg-slate-700 rounded-lg transition-colors" title="Underline"><Underline size={14} /></button>
+                     </div>
+                     
+                     <div className="flex items-center gap-1 border-r border-slate-700 pr-1 mr-1">
+                        <button onClick={() => execCommand('justifyLeft')} className="p-1.5 text-white hover:bg-slate-700 rounded-lg transition-colors" title="Align Left"><AlignLeft size={14} /></button>
+                        <button onClick={() => execCommand('justifyCenter')} className="p-1.5 text-white hover:bg-slate-700 rounded-lg transition-colors" title="Align Center"><AlignCenter size={14} /></button>
+                        <button onClick={() => execCommand('justifyRight')} className="p-1.5 text-white hover:bg-slate-700 rounded-lg transition-colors" title="Align Right"><AlignRight size={14} /></button>
+                        <button onClick={() => execCommand('justifyFull')} className="p-1.5 text-white hover:bg-slate-700 rounded-lg transition-colors" title="Justify"><AlignJustify size={14} /></button>
+                     </div>
+
+                     <div className="flex items-center gap-2">
+                        <div className="relative group">
+                          <button className="p-1.5 text-white hover:bg-slate-700 rounded-lg flex items-center gap-1 transition-colors">
+                             <TypeIcon size={14} />
+                          </button>
+                          <div className="absolute top-full left-0 mt-1 bg-slate-900 border border-slate-800 rounded-xl p-2 hidden group-hover:block z-30 shadow-2xl min-w-[140px]">
+                             <button onClick={() => execCommand('fontName', 'Inter')} className="w-full text-left px-2 py-1.5 text-[10px] text-white hover:bg-indigo-600 rounded font-sans uppercase font-bold">Sans Inter</button>
+                             <button onClick={() => execCommand('fontName', 'Lora')} className="w-full text-left px-2 py-1.5 text-[10px] text-white hover:bg-indigo-600 rounded font-serif italic">Serif Lora</button>
+                             <button onClick={() => execCommand('fontName', 'monospace')} className="w-full text-left px-2 py-1.5 text-[10px] text-white hover:bg-indigo-600 rounded font-mono">Monospace</button>
+                          </div>
+                        </div>
+
+                        <div className="relative group">
+                          <button className="p-1.5 text-white hover:bg-slate-700 rounded-lg flex items-center gap-1 transition-colors">
+                             <Palette size={14} />
+                          </button>
+                          <div className="absolute top-full left-0 mt-1 bg-slate-900 border border-slate-800 rounded-xl p-2 hidden group-hover:grid grid-cols-4 gap-1 z-30 shadow-2xl">
+                             {['#000000', '#1e293b', '#475569', '#64748b', '#e11d48', '#2563eb', '#10b981', '#f59e0b'].map(color => (
+                               <button key={color} onClick={() => execCommand('foreColor', color)} className="w-5 h-5 rounded shadow-inner" style={{ backgroundColor: color }} />
+                             ))}
+                          </div>
+                        </div>
+                     </div>
+                   </div>
+
+                   {/* EDITABLE CONTENT AREA */}
+                   <div 
+                      ref={editorRef}
+                      contentEditable
+                      dangerouslySetInnerHTML={{ __html: formData.editorialContent || '' }}
+                      onInput={(e) => handleInputChange({ target: { name: 'editorialContent', value: e.currentTarget.innerHTML } } as any)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs min-h-[80px] focus:bg-white transition-colors overflow-auto"
+                      placeholder="Add any additional notes or editorial content for the salary slip..."
+                   />
                 </div>
              </div>
            )}

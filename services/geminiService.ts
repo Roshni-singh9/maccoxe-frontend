@@ -28,7 +28,7 @@ export const generateProfessionalContentStream = async (
     const response = await ai.models.generateContent({
       model: activeModel,
       contents: `Generate a structured salary slip JSON for ${data.recipientName} at ${data.companyName}.
-      Base Salary: ${data.salary || data.annualCTC || '50000'}. Extra Info: ${data.extraTerms || ''}.
+      Base Salary: ${data.salary || data.annualCTC || '50000'}. Extra Info: ${data.salaryInstructions || data.extraTerms || ''}.
       Return JSON with: salaryComponents (array of {description, earnings, deductions}), totalEarnings, totalDeductions, netPay, netPayInWords.`,
       config: {
         responseMimeType: "application/json",
@@ -153,4 +153,77 @@ export const generateProfessionalContentStream = async (
     fullText += chunk.text;
     onChunk(fullText);
   }
+};
+
+export const extractSalarySlipData = async (imageData: string): Promise<Partial<DocumentData>> => {
+  const apiKey = String(import.meta.env.VITE_GEMINI_API_KEY || "");
+  
+  if (!apiKey || apiKey === "undefined" || apiKey === "") {
+    throw new Error("Gemini API Key is not detected in the environment. Please set VITE_GEMINI_API_KEY in your .env.local file.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey: apiKey });
+  
+  const activeModel = 'gemini-3-flash-preview';
+
+  const response = await ai.models.generateContent({
+    model: activeModel,
+    contents: [
+      { text: `Extract the following details from this salary slip image and return as JSON:
+      - recipientName (employee name)
+      - employeeId
+      - department
+      - role (designation)
+      - monthYear
+      - workingDays
+      - paidDays
+      - bankName
+      - bankAccountNumber
+      - ifscCode
+      - salaryComponents (array of {description, earnings, deductions})
+      - totalEarnings
+      - totalDeductions
+      - netPay
+      - netPayInWords
+      
+      Return only valid JSON, no extra text.` },
+      { inlineData: { mimeType: 'image/jpeg', data: imageData } }
+    ],
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          recipientName: { type: Type.STRING },
+          employeeId: { type: Type.STRING },
+          department: { type: Type.STRING },
+          role: { type: Type.STRING },
+          monthYear: { type: Type.STRING },
+          workingDays: { type: Type.STRING },
+          paidDays: { type: Type.STRING },
+          bankName: { type: Type.STRING },
+          bankAccountNumber: { type: Type.STRING },
+          ifscCode: { type: Type.STRING },
+          salaryComponents: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                description: { type: Type.STRING },
+                earnings: { type: Type.NUMBER },
+                deductions: { type: Type.NUMBER }
+              }
+            }
+          },
+          totalEarnings: { type: Type.NUMBER },
+          totalDeductions: { type: Type.NUMBER },
+          netPay: { type: Type.NUMBER },
+          netPayInWords: { type: Type.STRING }
+        }
+      }
+    }
+  });
+
+  const result = await response.response;
+  return JSON.parse(result.text());
 };
