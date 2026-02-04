@@ -22,7 +22,7 @@ export const generateProfessionalContentStream = async (
   const isInvoice = type === DocumentType.INVOICE;
 
   // Optimized model for text tasks
-  const activeModel = 'gemini-3-flash-preview';
+  const activeModel = 'gemini-2.5-flash';
 
   if (isSalarySlip) {
     const response = await ai.models.generateContent({
@@ -164,7 +164,7 @@ export const extractSalarySlipData = async (imageData: string): Promise<Partial<
 
   const ai = new GoogleGenAI({ apiKey: apiKey });
   
-  const activeModel = 'gemini-3-flash-preview';
+  const activeModel = 'gemini-2.5-flash';
 
   const response = await ai.models.generateContent({
     model: activeModel,

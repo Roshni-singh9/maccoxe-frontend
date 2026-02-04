@@ -554,6 +554,13 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type, onBack, initialDo
                 </optgroup>
               </select>
            </div>
+           
+           {errorMessage && (
+             <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[10px] font-semibold text-red-700 shadow-sm">
+               <AlertCircle size={14} className="mt-0.5 shrink-0" />
+               <div>{errorMessage}</div>
+             </div>
+           )}
 
            {/* IDENTITY SECTION */}
            <div className="space-y-4">
