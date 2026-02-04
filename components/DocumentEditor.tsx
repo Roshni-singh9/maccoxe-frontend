@@ -596,7 +596,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type, onBack, initialDo
              >
                Save API Key
              </button>
-             <p className="text-[9px] font-semibold text-slate-400">Stored locally in your browser.</p>
+             <p className="text-[9px] font-semibold text-slate-400">Stored locally in your browser (env: VITE_GEMINI_API_KEY or GEMINI_API_KEY).</p>
            </div>
 
            {/* IDENTITY SECTION */}

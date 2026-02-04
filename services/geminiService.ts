@@ -11,12 +11,13 @@ export const generateProfessionalContentStream = async (
   // We ensure it is cast to a string to handle potential bundler variations.
   const apiKey = String(
     import.meta.env.VITE_GEMINI_API_KEY ||
+    import.meta.env.GEMINI_API_KEY ||
     (typeof window !== "undefined" ? window.localStorage.getItem("gemini_api_key") : "") ||
     ""
   );
   
   if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    throw new Error("Gemini API Key is not detected in the environment. Please set VITE_GEMINI_API_KEY in your .env.local file.");
+    throw new Error("Gemini API Key is not detected in the environment. Please set VITE_GEMINI_API_KEY or GEMINI_API_KEY in your .env.local file.");
   }
 
   // Always initialize with named parameter apiKey.
@@ -162,12 +163,13 @@ export const generateProfessionalContentStream = async (
 export const extractSalarySlipData = async (imageData: string): Promise<Partial<DocumentData>> => {
   const apiKey = String(
     import.meta.env.VITE_GEMINI_API_KEY ||
+    import.meta.env.GEMINI_API_KEY ||
     (typeof window !== "undefined" ? window.localStorage.getItem("gemini_api_key") : "") ||
     ""
   );
   
   if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    throw new Error("Gemini API Key is not detected in the environment. Please set VITE_GEMINI_API_KEY in your .env.local file.");
+    throw new Error("Gemini API Key is not detected in the environment. Please set VITE_GEMINI_API_KEY or GEMINI_API_KEY in your .env.local file.");
   }
 
   const ai = new GoogleGenAI({ apiKey: apiKey });
