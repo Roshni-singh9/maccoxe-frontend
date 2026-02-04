@@ -9,7 +9,11 @@ export const generateProfessionalContentStream = async (
 ): Promise<void> => {
   // CRITICAL: The API key must be obtained from import.meta.env.VITE_GEMINI_API_KEY.
   // We ensure it is cast to a string to handle potential bundler variations.
-  const apiKey = String(import.meta.env.VITE_GEMINI_API_KEY || "");
+  const apiKey = String(
+    import.meta.env.VITE_GEMINI_API_KEY ||
+    (typeof window !== "undefined" ? window.localStorage.getItem("gemini_api_key") : "") ||
+    ""
+  );
   
   if (!apiKey || apiKey === "undefined" || apiKey === "") {
     throw new Error("Gemini API Key is not detected in the environment. Please set VITE_GEMINI_API_KEY in your .env.local file.");
@@ -156,7 +160,11 @@ export const generateProfessionalContentStream = async (
 };
 
 export const extractSalarySlipData = async (imageData: string): Promise<Partial<DocumentData>> => {
-  const apiKey = String(import.meta.env.VITE_GEMINI_API_KEY || "");
+  const apiKey = String(
+    import.meta.env.VITE_GEMINI_API_KEY ||
+    (typeof window !== "undefined" ? window.localStorage.getItem("gemini_api_key") : "") ||
+    ""
+  );
   
   if (!apiKey || apiKey === "undefined" || apiKey === "") {
     throw new Error("Gemini API Key is not detected in the environment. Please set VITE_GEMINI_API_KEY in your .env.local file.");
