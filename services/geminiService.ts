@@ -224,6 +224,9 @@ export const extractSalarySlipData = async (imageData: string): Promise<Partial<
     }
   });
 
-  const result = await response.response;
-  return JSON.parse(result.text());
+  const responseText = response.text ?? "";
+  if (!responseText) {
+    throw new Error("Empty response received from Gemini while extracting salary slip data.");
+  }
+  return JSON.parse(responseText);
 };
