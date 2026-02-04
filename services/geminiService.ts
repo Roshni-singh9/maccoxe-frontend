@@ -2,6 +2,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { DocumentType, DocumentData } from "../types";
 
+const parseSalaryAmount = (value?: string | number): string | undefined => {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value.toString();
+  }
+  const cleaned = String(value).replace(/[,]/g, "");
+  const match = cleaned.match(/(\d+(?:\.\d+)?)/);
+  return match?.[1];
+};
+
 export const generateProfessionalContentStream = async (
   type: DocumentType,
   data: DocumentData,
@@ -30,10 +40,16 @@ export const generateProfessionalContentStream = async (
   const activeModel = 'gemini-2.5-flash';
 
   if (isSalarySlip) {
+    const baseSalary =
+      parseSalaryAmount(data.salary) ||
+      parseSalaryAmount(data.annualCTC) ||
+      parseSalaryAmount(data.salaryInstructions) ||
+      "50000";
+
     const response = await ai.models.generateContent({
       model: activeModel,
       contents: `Generate a structured salary slip JSON for ${data.recipientName} at ${data.companyName}.
-      Base Salary: ${data.salary || data.annualCTC || '50000'}. Extra Info: ${data.salaryInstructions || data.extraTerms || ''}.
+      Base Salary: ${baseSalary}. Extra Info: ${data.salaryInstructions || data.extraTerms || ''}.
       Return JSON with: salaryComponents (array of {description, earnings, deductions}), totalEarnings, totalDeductions, netPay, netPayInWords.`,
       config: {
         responseMimeType: "application/json",
