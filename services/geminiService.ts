@@ -2,6 +2,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { DocumentType, DocumentData } from "../types";
 
+const parseSalaryAmount = (value?: string | number): string | undefined => {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value.toString();
+  }
+  const cleaned = String(value).replace(/[,]/g, "");
+  const match = cleaned.match(/(\d+(?:\.\d+)?)/);
+  return match?.[1];
+};
+
 export const generateProfessionalContentStream = async (
   type: DocumentType,
   data: DocumentData,
@@ -9,10 +19,15 @@ export const generateProfessionalContentStream = async (
 ): Promise<void> => {
   // CRITICAL: The API key must be obtained from import.meta.env.VITE_GEMINI_API_KEY.
   // We ensure it is cast to a string to handle potential bundler variations.
-  const apiKey = String(import.meta.env.VITE_GEMINI_API_KEY || "");
+  const apiKey = String(
+    import.meta.env.VITE_GEMINI_API_KEY ||
+    import.meta.env.GEMINI_API_KEY ||
+    (typeof window !== "undefined" ? window.localStorage.getItem("gemini_api_key") : "") ||
+    ""
+  );
   
   if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    throw new Error("Gemini API Key is not detected in the environment. Please set VITE_GEMINI_API_KEY in your .env.local file.");
+    throw new Error("Gemini API Key is not detected in the environment. Please set VITE_GEMINI_API_KEY or GEMINI_API_KEY in your .env.local file.");
   }
 
   // Always initialize with named parameter apiKey.
@@ -22,13 +37,19 @@ export const generateProfessionalContentStream = async (
   const isInvoice = type === DocumentType.INVOICE;
 
   // Optimized model for text tasks
-  const activeModel = 'gemini-3-flash-preview';
+  const activeModel = 'gemini-2.5-flash';
 
   if (isSalarySlip) {
+    const baseSalary =
+      parseSalaryAmount(data.salary) ||
+      parseSalaryAmount(data.annualCTC) ||
+      parseSalaryAmount(data.salaryInstructions) ||
+      "50000";
+
     const response = await ai.models.generateContent({
       model: activeModel,
       contents: `Generate a structured salary slip JSON for ${data.recipientName} at ${data.companyName}.
-      Base Salary: ${data.salary || data.annualCTC || '50000'}. Extra Info: ${data.salaryInstructions || data.extraTerms || ''}.
+      Base Salary: ${baseSalary}. Extra Info: ${data.salaryInstructions || data.extraTerms || ''}.
       Return JSON with: salaryComponents (array of {description, earnings, deductions}), totalEarnings, totalDeductions, netPay, netPayInWords.`,
       config: {
         responseMimeType: "application/json",
@@ -156,15 +177,20 @@ export const generateProfessionalContentStream = async (
 };
 
 export const extractSalarySlipData = async (imageData: string): Promise<Partial<DocumentData>> => {
-  const apiKey = String(import.meta.env.VITE_GEMINI_API_KEY || "");
+  const apiKey = String(
+    import.meta.env.VITE_GEMINI_API_KEY ||
+    import.meta.env.GEMINI_API_KEY ||
+    (typeof window !== "undefined" ? window.localStorage.getItem("gemini_api_key") : "") ||
+    ""
+  );
   
   if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    throw new Error("Gemini API Key is not detected in the environment. Please set VITE_GEMINI_API_KEY in your .env.local file.");
+    throw new Error("Gemini API Key is not detected in the environment. Please set VITE_GEMINI_API_KEY or GEMINI_API_KEY in your .env.local file.");
   }
 
   const ai = new GoogleGenAI({ apiKey: apiKey });
   
-  const activeModel = 'gemini-3-flash-preview';
+  const activeModel = 'gemini-2.5-flash';
 
   const response = await ai.models.generateContent({
     model: activeModel,

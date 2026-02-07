@@ -23,6 +23,7 @@ import {
   Mail,
   Phone,
   Globe,
+  KeyRound,
   UserCircle,
   CreditCard,
   FileSpreadsheet,
@@ -124,10 +125,15 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type, onBack, initialDo
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [salarySlipImage, setSalarySlipImage] = useState<File | null>(null);
   const [isExtracting, setIsExtracting] = useState<boolean>(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
 
   const isSalarySlip = activeType === DocumentType.SALARY_SLIP;
   const isContract = activeType === DocumentType.EMPLOYMENT_CONTRACT || activeType === DocumentType.INTERNSHIP_CONTRACT || activeType === DocumentType.CONSULTANT_AGREEMENT || activeType === DocumentType.APPOINTMENT_LETTER;
   const isCertificate = activeType.toLowerCase().includes('certificate') || activeType.toLowerCase().includes('award');
+
+  useEffect(() => {
+    setApiKeyInput(localStorage.getItem('gemini_api_key') || '');
+  }, []);
 
   useEffect(() => {
     if (isSalarySlip && generatedContent && !isGenerating) {
@@ -144,6 +150,16 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type, onBack, initialDo
       editorRef.current.innerHTML = generatedContent;
     }
   }, [generatedContent]);
+
+  const handleApiKeySave = () => {
+    const trimmed = apiKeyInput.trim();
+    if (trimmed) {
+      localStorage.setItem('gemini_api_key', trimmed);
+      setErrorMessage(null);
+    } else {
+      localStorage.removeItem('gemini_api_key');
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -553,6 +569,34 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type, onBack, initialDo
                   <option value={DocumentType.INVOICE}>Professional Invoice</option>
                 </optgroup>
               </select>
+           </div>
+           
+           {errorMessage && (
+             <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[10px] font-semibold text-red-700 shadow-sm">
+               <AlertCircle size={14} className="mt-0.5 shrink-0" />
+               <div>{errorMessage}</div>
+             </div>
+           )}
+
+           <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+             <div className="flex items-center gap-2 text-slate-500">
+               <KeyRound size={12} />
+               <p className="text-[9px] font-black uppercase tracking-[0.2em]">Gemini API Key</p>
+             </div>
+             <input
+               value={apiKeyInput}
+               onChange={(e) => setApiKeyInput(e.target.value)}
+               placeholder="Paste API key"
+               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-semibold"
+             />
+             <button
+               type="button"
+               onClick={handleApiKeySave}
+               className="w-full rounded-lg bg-slate-900 py-2 text-[9px] font-black uppercase tracking-widest text-white transition-all hover:bg-slate-800 active:scale-95"
+             >
+               Save API Key
+             </button>
+             <p className="text-[9px] font-semibold text-slate-400">Stored locally in your browser (env: VITE_GEMINI_API_KEY or GEMINI_API_KEY).</p>
            </div>
 
            {/* IDENTITY SECTION */}
